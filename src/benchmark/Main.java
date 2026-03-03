@@ -1,101 +1,31 @@
 package benchmark;
 
-import algorithms.Fibonacci;
+import algorithms.*;
+import utils.GeneradorDatos;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-/**
- * ============================================================
- * PUNTO DE ENTRADA — BENCHMARK FIBONACCI
- * ============================================================
- * Ejecuta ambas versiones de Fibonacci para distintos valores de n,
- * mide sus tiempos y exporta los resultados a un archivo CSV.
- *
- * CÓMO COMPILAR (desde la carpeta raíz del proyecto):
- *   javac -d out src/algorithms/Fibonacci.java src/benchmark/Medidor.java src/benchmark/Main.java
- *
- * CÓMO EJECUTAR:
- *   java -cp out benchmark.Main
- * ============================================================
- */
 public class Main {
 
-    // ----------------------------------------------------------------
-    // TAMAÑOS DE PRUEBA
-    // ----------------------------------------------------------------
-    /**
-     * Valores de n para los que se ejecutará el benchmark.
-     *
-     * ITERATIVO: puede manejar n grandes (hasta ~92 con long)
-     * RECURSIVO: limitado a n ≤ 30 por la complejidad O(2^n)
-     *   fib(30) → ~2.7 millones de llamadas
-     *   fib(40) → ~2.7 mil millones de llamadas (tarda minutos)
-     */
-    private static final int[] TAMANOS = {5, 10, 15, 20, 25, 30};
+    private static final int[] TAMANOS_PEQUENOS = {5, 10, 15, 20, 25, 30};
+    private static final int[] TAMANOS_GRANDES = {100, 500, 1000, 5000, 10000};
 
-    /** Ruta del archivo de resultados */
     private static final String CSV_PATH = "resultados/tiempos.csv";
+    private static final long SEED = 12345L;
 
-    // ----------------------------------------------------------------
-    // MAIN
-    // ----------------------------------------------------------------
     public static void main(String[] args) {
         imprimirBanner();
 
         StringBuilder csv = new StringBuilder();
-        csv.append("Algoritmo,Version,n,Resultado,Tiempo_ms\n");
+        csv.append("Algoritmo,Version,n,Ej1_ms,Ej2_ms,Ej3_ms,Ej4_ms,Ej5_ms\n");
 
-        // ---- FIBONACCI ITERATIVO ----
-        System.out.println("\n  FIBONACCI ITERATIVO  [O(n)]");
-        Medidor.imprimirEncabezado();
+        correrFactorial(csv);
+        correrFibonacci(csv);
+        correrBusquedaLineal(csv);
+        correrBurbuja(csv);
 
-        for (int n : TAMANOS) {
-            final int fn = n;
-
-            // Calcular resultado una vez (solo para mostrarlo)
-            long resultado = Fibonacci.iterativo(fn);
-
-            // Medir solo el algoritmo puro (sin I/O ni inicialización)
-            double tiempoMs = Medidor.medir(() -> Fibonacci.iterativo(fn));
-
-            Medidor.imprimirFila("Fibonacci", "Iterativo", n, tiempoMs);
-            csv.append(String.format("Fibonacci,Iterativo,%d,%d,%.6f%n", n, resultado, tiempoMs));
-        }
-
-        // ---- FIBONACCI RECURSIVO ----
-        System.out.println("\n  FIBONACCI RECURSIVO  [O(2^n)]");
-        Medidor.imprimirEncabezado();
-
-        for (int n : TAMANOS) {
-            final int fn = n;
-
-            long resultado = Fibonacci.recursivo(fn);
-            double tiempoMs = Medidor.medir(() -> Fibonacci.recursivo(fn));
-
-            Medidor.imprimirFila("Fibonacci", "Recursivo", n, tiempoMs);
-            csv.append(String.format("Fibonacci,Recursivo,%d,%d,%.6f%n", n, resultado, tiempoMs));
-        }
-
-        // ---- ANÁLISIS DE DIFERENCIA ----
-        System.out.println("\n  COMPARACIÓN ITERATIVO vs RECURSIVO");
-        System.out.println("-".repeat(60));
-        System.out.printf("%-8s | %-14s | %-14s | %s%n",
-                "n", "Iterativo (ms)", "Recursivo (ms)", "Recursivo / Iterativo");
-        System.out.println("-".repeat(60));
-
-        for (int n : TAMANOS) {
-            final int fn = n;
-            double tIter = Medidor.medir(() -> Fibonacci.iterativo(fn));
-            double tRec  = Medidor.medir(() -> Fibonacci.recursivo(fn));
-            double factor = (tIter > 0) ? tRec / tIter : 0;
-
-            System.out.printf("n=%-6d | %-14.6f | %-14.6f | %.1fx más lento%n",
-                    n, tIter, tRec, factor);
-        }
-
-        // ---- EXPORTAR CSV ----
         exportarCSV(csv.toString());
 
         System.out.println("\n============================================================");
@@ -103,14 +33,108 @@ public class Main {
         System.out.println("============================================================");
     }
 
-    // ----------------------------------------------------------------
-    // AUXILIARES
-    // ----------------------------------------------------------------
+    private static void correrFactorial(StringBuilder csv) {
+        System.out.println("\n  A1 - FACTORIAL");
+        Medidor.imprimirEncabezado();
+
+        for (int n : TAMANOS_PEQUENOS) {
+            //if (n > 20) continue; // factorial max 20
+            final int fn = n;
+
+            double[] it = Medidor.medirDetalle(() -> Factorial.iterativo(fn));
+            double[] re = Medidor.medirDetalle(() -> Factorial.recursivo(fn));
+
+            Medidor.imprimirFila("Factorial", "Iterativo", n, promedio(it));
+            Medidor.imprimirFila("Factorial", "Recursivo", n, promedio(re));
+
+            csv.append(filaCSV("A1 - Factorial", "Iterativo", n, it));
+            csv.append(filaCSV("A1 - Factorial", "Recursivo", n, re));
+        }
+    }
+
+    private static void correrFibonacci(StringBuilder csv) {
+        System.out.println("\n  A2 - FIBONACCI");
+        Medidor.imprimirEncabezado();
+
+        for (int n : TAMANOS_PEQUENOS) {
+            final int fn = n;
+
+            double[] it = Medidor.medirDetalle(() -> Fibonacci.iterativo(fn));
+            double[] re = Medidor.medirDetalle(() -> Fibonacci.recursivo(fn)); // <= 30
+
+            Medidor.imprimirFila("Fibonacci", "Iterativo", n, promedio(it));
+            Medidor.imprimirFila("Fibonacci", "Recursivo", n, promedio(re));
+
+            csv.append(filaCSV("A2 - Fibonacci", "Iterativo", n, it));
+            csv.append(filaCSV("A2 - Fibonacci", "Recursivo", n, re));
+        }
+    }
+
+    private static void correrBusquedaLineal(StringBuilder csv) {
+        System.out.println("\n  A3 - BUSQUEDA LINEAL");
+        Medidor.imprimirEncabezado();
+
+        for (int n : TAMANOS_GRANDES) {
+            int[] arr = GeneradorDatos.arregloAleatorio(n, SEED);
+            int target = GeneradorDatos.valorExistente(arr);
+
+            final int[] a = arr;
+            final int t = target;
+
+            double[] it = Medidor.medirDetalle(() -> BusquedaLineal.iterativa(a, t));
+            double[] re = Medidor.medirDetalle(() -> BusquedaLineal.recursiva(a, t));
+
+            Medidor.imprimirFila("Busqueda", "Iterativo", n, promedio(it));
+            Medidor.imprimirFila("Busqueda", "Recursivo", n, promedio(re));
+
+            csv.append(filaCSV("A3 - Busqueda Lineal", "Iterativo", n, it));
+            csv.append(filaCSV("A3 - Busqueda Lineal", "Recursivo", n, re));
+        }
+    }
+
+    private static void correrBurbuja(StringBuilder csv) {
+        System.out.println("\n  A4 - ORDENAMIENTO BURBUJA");
+        Medidor.imprimirEncabezado();
+
+        for (int n : TAMANOS_GRANDES) {
+            int[] base = GeneradorDatos.arregloAleatorio(n, SEED);
+
+            // OJO: cada ejecución debe ordenar una copia fresca
+            double[] it = Medidor.medirDetalle(() -> {
+                int[] copia = base.clone();
+                OrdenamientoBurbuja.iterativo(copia);
+            });
+
+            double[] re = Medidor.medirDetalle(() -> {
+                int[] copia = base.clone();
+                OrdenamientoBurbuja.recursivo(copia);
+            });
+
+            Medidor.imprimirFila("Burbuja", "Iterativo", n, promedio(it));
+            Medidor.imprimirFila("Burbuja", "Recursivo", n, promedio(re));
+
+            csv.append(filaCSV("A4 - Burbuja", "Iterativo", n, it));
+            csv.append(filaCSV("A4 - Burbuja", "Recursivo", n, re));
+        }
+    }
+
+    private static String filaCSV(String algoritmo, String version, int n, double[] t) {
+        return String.format(
+                "%s,%s,%d,%.6f,%.6f,%.6f,%.6f,%.6f%n",
+                algoritmo, version, n,
+                t[0], t[1], t[2], t[3], t[4]
+        );
+    }
+
+    private static double promedio(double[] arr) {
+        double s = 0;
+        for (double v : arr) s += v;
+        return s / arr.length;
+    }
+
     private static void imprimirBanner() {
         System.out.println("============================================================");
-        System.out.println("  ESTRUCTURA DE DATOS — BENCHMARK FIBONACCI");
-        System.out.println("  Universidad Da Vinci de Guatemala");
-        System.out.println("  Ing. Brandon Chitay");
+        System.out.println("  ESTRUCTURA DE DATOS — BENCHMARK ITERATIVO VS RECURSIVO");
         System.out.println("============================================================");
     }
 

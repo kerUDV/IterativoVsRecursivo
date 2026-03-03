@@ -15,7 +15,7 @@ package benchmark;
 public class Medidor {
 
     /** Cuántas veces se repite cada prueba para promediar */
-    private static final int REPETICIONES = 10;
+    private static final int REPETICIONES = 5;
 
     // ----------------------------------------------------------------
     // INTERFAZ FUNCIONAL (permite pasar un método como parámetro)
@@ -38,18 +38,17 @@ public class Medidor {
      * @param algoritmo bloque de código a medir (lambda)
      * @return tiempo promedio en milisegundos (ms)
      */
-    public static double medir(Algoritmo algoritmo) {
-        long totalNanos = 0;
+    public static double[] medirDetalle(Algoritmo algoritmo) {
+        double[] tiempos = new double[REPETICIONES];
 
         for (int i = 0; i < REPETICIONES; i++) {
-            long inicio = System.nanoTime();   // ← reloj de alta resolución
+            long inicio = System.nanoTime();
             algoritmo.ejecutar();
-            long fin    = System.nanoTime();
-            totalNanos += (fin - inicio);
+            long fin = System.nanoTime();
+            tiempos[i] = (fin - inicio) / 1_000_000.0; // ms
         }
 
-        double promedioNanos = (double) totalNanos / REPETICIONES;
-        return promedioNanos / 1_000_000.0;    // nanosegundos → milisegundos
+        return tiempos;
     }
 
     // ----------------------------------------------------------------
